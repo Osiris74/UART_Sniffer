@@ -10,6 +10,24 @@ typedef struct
 	volatile char length;
 } Message;
 
+// Contains indexes of TX and RX buffers
+typedef struct  
+{
+	volatile unsigned char UART_OUT_IDX;    //TX index
+	volatile unsigned char UART_IN_IDX;		//RX index
+	
+	unsigned char UART_RX_BUFFER[UART_MAX_BUFFER];	//Buffer for tx data
+	unsigned char UART_TX_BUFFER[UART_MAX_BUFFER];	//Buffer for rx data
+} Indexes;
+
+/*
+typedef struct
+{
+	char UART_OPERATION_MODE;				//Operation mode to check what is going on 
+	char UART_FLAG;							//Flag indicating tx and rx of data
+} Flags;
+*/
+
 
 typedef struct
 {
@@ -22,18 +40,12 @@ typedef struct
 	volatile char FULL;
 } UARTQueue;
 
-
-
-
-unsigned char UART_RX_BUFFER[UART_MAX_BUFFER];	//Buffer for tx data
-unsigned char UART_TX_BUFFER[UART_MAX_BUFFER];	//Buffer for rx data
-unsigned char rx_buffer     [UART_MAX_BUFFER];	//RX Buffer to transmit data to user 
-
-volatile unsigned char UART_OUT_IDX;    //TX index
-unsigned char UART_IN_IDX;				//RX index
-char UART_BYTE_CNT;						//Number of transmitted bytes
-char UART_OPERATION_MODE;				//Operation mode to check what is going on 
-char UART_FLAG;							//Flag indicating tx and rx of data
+//unsigned char UART_RX_BUFFER[UART_MAX_BUFFER];	//Buffer for tx data
+//unsigned char UART_TX_BUFFER[UART_MAX_BUFFER];	//Buffer for rx data
+//volatile unsigned char UART_OUT_IDX;    //TX index
+//volatile unsigned char UART_IN_IDX;		//RX index
+//char UART_OPERATION_MODE;				//Operation mode to check what is going on 
+//char UART_FLAG;							//Flag indicating tx and rx of data
 
 long tempMsgValue;
 
@@ -43,19 +55,60 @@ int  UART_TX_MSG_LEN;
 
 // initialization
 UARTQueue uartQueue;
+Indexes   uart0_indexes;
+volatile Flags	  uart0_flags;
+
+Indexes   uart1_indexes;
+Flags	  uart1_flags;
+
+
+
+void uart_rx_data(Indexes *uart_indexes, Flags *uart_flags, char byte)
+{
+		if (byte==UART_STOP_BYTE)
+		{
+			// Saves last byte
+			
+			uart_indexes->UART_RX_BUFFER[uart0_indexes.UART_IN_IDX] = byte;
+			uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
+			
+			uart_indexes->UART_RX_BUFFER[uart0_indexes.UART_IN_IDX] = NEW_LINE;
+			uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
+			
+			uart_flags->UART_OPERATION_MODE							= IDLE_MODE;
+			uart_flags->UART_FLAG									= DATA_RECEIVED_FLAG;
+			rx_msg_len				     							= uart_indexes->UART_IN_IDX;
+			
+			uart_indexes->UART_IN_IDX								= 0;
+			// indicates that user would like to read data
+			if (uart_indexes->UART_RX_BUFFER[0] == 0x26)
+			{
+				uart_flags->UART_FLAG								= DATA_REQUEST_FLAG;
+				uart_indexes->UART_IN_IDX							= 0;
+			}
+		}
+		else
+		{
+			uart_flags->UART_OPERATION_MODE 						= RX_MODE;
+			uart_indexes->UART_RX_BUFFER[uart0_indexes.UART_IN_IDX] = byte;
+			uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
+		}
+}
+
 
 
 void USART_INIT(void)
 {
+	// UART0 initialization
 	UBRR0H = HI(bauddivider);
 	UBRR0L = LO(bauddivider);
 	UCSR0A = 1<<UDRE0|1<<U2X0;
 	UCSR0B = 1<<RXEN0|1<<TXEN0|0<<UDRIE0|1<<RXCIE0;
 	UCSR0C = 0<<USBS0|1<<UCSZ01|1<<UCSZ00;
 	
-	UART_OUT_IDX		= 0;
-	UART_IN_IDX			= 0;
-	UART_BYTE_CNT		= 0;
+	uart0_indexes.UART_OUT_IDX		= 0;
+	uart0_indexes.UART_IN_IDX		= 0;
+	
 	rx_msg_len   		= 0;
 	UART_TX_MSG_LEN     = 0;
 	
@@ -67,11 +120,30 @@ void USART_INIT(void)
 	tempMsgValue			= 0;
 	
 	
-	UART_OPERATION_MODE = IDLE_MODE;
-	UART_FLAG			= DATA_OPERATION_COMPLETE_FLAG;	
+	uart1_flags.UART_OPERATION_MODE = IDLE_MODE;
+	uart1_flags.UART_FLAG			= DATA_OPERATION_COMPLETE_FLAG;
+	
+	// UART1 initialization	
+	UBRR1H = HI(bauddivider);
+	UBRR1L = LO(bauddivider);
+	UCSR1A = 1<<UDRE0|1<<U2X0;
+	UCSR1B = 1<<RXEN0|1<<TXEN0|0<<UDRIE0|1<<RXCIE0;
+	UCSR1C = 0<<USBS0|1<<UCSZ01|1<<UCSZ00;
 }
 
-// UART TX
+// Data from Master received
+ISR(USART1_RX_vect)
+{
+	// Here I should put the same logic as at the analogue method RX
+}
+
+// Transmit message from Slave to Master
+ISR(USART1_UDRE_vect)
+{
+	
+}
+
+// Transmit message from Master to Slave
 ISR(USART0_UDRE_vect) 
 {
 	// Check have we send all bytes of current message?
@@ -129,7 +201,7 @@ char UART_AddToQueue(unsigned char *data, unsigned int length)
 	uartQueue.queueHead = nextHead;
 
 	// There is some data inside the buffer
-		if (!uartQueue.sending && UART_OPERATION_MODE == IDLE_MODE) 
+		if (!uartQueue.sending && uart0_flags.UART_OPERATION_MODE == IDLE_MODE) 
 		{
 			uartQueue.sending	   = 1;
 			uartQueue.currentIndex = 0;
@@ -180,39 +252,13 @@ ISR(USART0_RX_vect)
 	char temp;
 	temp = UDR0;
 	
-	if (temp==UART_STOP_BYTE)
-	{
-		// Saves last byte
-		UART_RX_BUFFER[UART_IN_IDX] = temp;
-		UART_IN_IDX					= UART_IN_IDX + 1;
-		
-		UART_RX_BUFFER[UART_IN_IDX] = NEW_LINE;
-		UART_IN_IDX					= UART_IN_IDX + 1;
-		
-	   	UART_OPERATION_MODE			= IDLE_MODE;
-		UART_FLAG					= DATA_RECEIVED_FLAG;
-		rx_msg_len					= UART_IN_IDX; 
-		
-		UART_IN_IDX					= 0;
-		// indicates that user would like to read data
-		if (UART_RX_BUFFER[0] == 0x26) 
-		{
-			UART_FLAG				= DATA_REQUEST_FLAG;
-			UART_IN_IDX				= 0;
-		}
-	}
-	else
-	{
-	  	UART_OPERATION_MODE			= RX_MODE;
-	  	UART_RX_BUFFER[UART_IN_IDX] = temp;		  
-	  	UART_IN_IDX					= UART_IN_IDX + 1;	
-	}
+	uart_rx_data(&uart0_indexes, &uart0_flags, temp);
 }
 
 
 int uart_return_RX_buf_len()
 {
-	int value = UART_IN_IDX; 
+	int value = uart0_indexes.UART_IN_IDX; 
 	return value;
 }
 
@@ -225,7 +271,7 @@ int uart_return_RX_buf(unsigned char* data)
 {
 	for (int i = 0; i < rx_msg_len; i++) 
 	{
-		data[i] = UART_RX_BUFFER[i]; 
+		data[i] = uart0_indexes.UART_RX_BUFFER[i]; 
 	}
 	return rx_msg_len;
 }

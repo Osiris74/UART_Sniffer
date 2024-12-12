@@ -53,6 +53,15 @@ int uart_return_RX_buf(unsigned char* data);
 void uart_set_RX_buf_len();
 
 
+volatile typedef struct
+{
+	volatile char UART_OPERATION_MODE;				//Operation mode to check what is going on
+	volatile char UART_FLAG;							//Flag indicating tx and rx of data
+} Flags;
+
+volatile extern Flags	  uart0_flags;
+volatile extern Flags	  uart1_flags;
+
 
 #endif
 

@@ -139,10 +139,11 @@ int main(void)
 	sei();
     while (1) 
     {
-		if ((UART_FLAG == DATA_RECEIVED_FLAG) || (UART_FLAG == DATA_REQUEST_FLAG)) 
+		if ((uart0_flags.UART_FLAG == DATA_RECEIVED_FLAG) || (uart0_flags.UART_FLAG == DATA_REQUEST_FLAG)) 
 		{
+			
 			// Data was received -> need to save it to the EEPROM			
-			if (UART_FLAG == DATA_REQUEST_FLAG)
+			if (uart0_flags.UART_FLAG == DATA_REQUEST_FLAG)
 			{
 				send_eeprom_data();
 			}
@@ -152,7 +153,7 @@ int main(void)
 				save_eeprom_data();	
 			}			
 			uart_set_RX_buf_len();
-			UART_FLAG = DATA_OPERATION_COMPLETE_FLAG;
+			uart0_flags.UART_FLAG = DATA_OPERATION_COMPLETE_FLAG;
 		}
     }
 }
