@@ -38,5 +38,5 @@ void prepare_and_send_data(int length, unsigned char *buffer, char msg_id)
 	//
 	buff[newLength-1] = MSG_STOB_BYTE;
 		
-	UART_AddToQueue(buff, newLength);
+	UART_AddToQueue(buff, newLength, 0);
 }

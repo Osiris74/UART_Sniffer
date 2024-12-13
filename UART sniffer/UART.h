@@ -44,20 +44,22 @@ void UART_CHECK_RX(void);
 #define QUEUE_SIZE								0x04
 #define BUF_MASK (UART_MAX_RING_BUFFER_LENGTH-1)
 
-//char UART_AddToQueue(unsigned char *data, unsigned int length);
+char UART_AddToQueue(unsigned char *data, unsigned int length, char uart_number);
 
 void uart_send_data(long data, char msg_id);
 
-int uart_return_RX_buf(unsigned char* data);
+int uart_return_RX_buf(unsigned char* data, char uart_number);
 
-void uart_set_RX_buf_len();
+void uart_set_RX_buf_len(char uart_number);
 
 
 volatile typedef struct
 {
 	volatile char UART_OPERATION_MODE;				//Operation mode to check what is going on
-	volatile char UART_FLAG;							//Flag indicating tx and rx of data
+	volatile char UART_FLAG;						//Flag indicating tx and rx of data
 } Flags;
+
+
 
 volatile extern Flags	  uart0_flags;
 volatile extern Flags	  uart1_flags;

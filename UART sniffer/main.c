@@ -30,11 +30,11 @@ void save_eeprom_data()
 		unsigned char data[32];
 		int len;
 		
-		len = uart_return_RX_buf(data);				
+		len = uart_return_RX_buf(data, 0);				
 		data_addr = len;		
 						
 		// Zero length of the buff
-		uart_set_RX_buf_len();
+		uart_set_RX_buf_len(0);
 		
 		// Saves length of the data		
 		eeprom_write_byte((uint8_t*)0, data_addr >> 8);
@@ -64,11 +64,11 @@ void save_eeprom_data()
 		unsigned char data[32];
 		int len;
 		
-		len         = uart_return_RX_buf(data);
+		len         = uart_return_RX_buf(data, 0);
 		data_addr   = offset + len;
 		
 		// Zero length of the buff
-		uart_set_RX_buf_len();
+		uart_set_RX_buf_len(0);
 		
 		// Set new length of the data
 		eeprom_write_byte((uint8_t*)0, data_addr >> 8);
@@ -106,7 +106,7 @@ void send_eeprom_data()
 				{
 					buf[buf_counter] = temp;
 					buf_counter		 = buf_counter + 1;
-					UART_AddToQueue(buf, buf_counter);
+					UART_AddToQueue(buf, buf_counter, 0);
 					buf_counter		 = 0;
 				}
 				else
@@ -119,7 +119,7 @@ void send_eeprom_data()
 		
 		if (buf_counter != 0)
 		{
-			UART_AddToQueue(buf, buf_counter);
+			UART_AddToQueue(buf, buf_counter, 0);
 			buf_counter = 0;
 		}
 	}
@@ -139,9 +139,9 @@ int main(void)
 	sei();
     while (1) 
     {
+	
 		if ((uart0_flags.UART_FLAG == DATA_RECEIVED_FLAG) || (uart0_flags.UART_FLAG == DATA_REQUEST_FLAG)) 
-		{
-			
+		{			
 			// Data was received -> need to save it to the EEPROM			
 			if (uart0_flags.UART_FLAG == DATA_REQUEST_FLAG)
 			{
@@ -149,11 +149,63 @@ int main(void)
 			}
 			
 			else
-			{
+			{				
 				save_eeprom_data();	
 			}			
-			uart_set_RX_buf_len();
+			
+			uart_set_RX_buf_len(0);
 			uart0_flags.UART_FLAG = DATA_OPERATION_COMPLETE_FLAG;
+		}
+		
+		if ((uart1_flags.UART_FLAG == DATA_RECEIVED_FLAG) || (uart1_flags.UART_FLAG == DATA_REQUEST_FLAG))
+		{
+			// Data was received -> need to save it to the EEPROM
+			if (uart1_flags.UART_FLAG == DATA_REQUEST_FLAG)
+			{
+				char buf[5];
+				buf[0] = 'H';
+				buf[1] = 'e';
+				buf[2] = 'l';
+				buf[3] = 'l';
+				buf[4] = 'o';
+				
+				UART_AddToQueue(buf, 5, 0);				
+			}
+						
+			else
+			{
+				unsigned char data[32];
+				unsigned char buf [32];
+				int buf_counter = 0;
+				int len;
+				
+				len = uart_return_RX_buf(data, 1);				
+				data_addr = len;		
+						
+				// Zero length of the buff
+				uart_set_RX_buf_len(1);
+	
+				// Add possibility to save to eeprom
+				char temp;
+				for (int i=0; i < len; i++)
+				{
+					temp = data[i];
+					if (temp == NEW_LINE)
+					{
+						buf[buf_counter] = temp;
+						buf_counter		 = buf_counter + 1;
+						UART_AddToQueue(buf, buf_counter, 0);
+						buf_counter		 = 0;
+					}
+					else
+					{
+						buf[buf_counter] = temp;
+						buf_counter		 = buf_counter + 1;
+					}
+				}
+			}
+			
+			uart1_flags.UART_FLAG = DATA_OPERATION_COMPLETE_FLAG;
 		}
     }
 }
