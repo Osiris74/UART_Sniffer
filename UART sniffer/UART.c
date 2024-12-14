@@ -74,8 +74,8 @@ void uart_rx_data(Indexes *uart_indexes, Flags *uart_flags, char byte)
 			uart_indexes->UART_RX_BUFFER[uart_indexes->UART_IN_IDX] = byte;
 			uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
 			
-			uart_indexes->UART_RX_BUFFER[uart_indexes->UART_IN_IDX] = NEW_LINE;
-			uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
+			//uart_indexes->UART_RX_BUFFER[uart_indexes->UART_IN_IDX] = NEW_LINE;
+			//uart_indexes->UART_IN_IDX								= uart_indexes->UART_IN_IDX + 1;
 			
 			uart_flags->UART_OPERATION_MODE							= IDLE_MODE;
 			uart_flags->UART_FLAG									= DATA_RECEIVED_FLAG;
@@ -319,24 +319,25 @@ long charArrayToLong(const char *charArray, int length)
 }
 
 
-int uart_return_RX_buf_len()
+/*int uart_return_RX_buf_len()
 {
 	int value = uart0_indexes.UART_IN_IDX; 
 	return value;
 }
+*/
 
 void uart_set_RX_buf_len(char uart_index)
 {
-	Indexes uart_indexes;	
+	Indexes* uart_indexes;	
 	if (uart_index == 0)
 	{
-		uart_indexes = uart0_indexes; 
+		uart_indexes = &uart0_indexes; 
 	}
 	else
 	{
-		uart_indexes = uart1_indexes;
+		uart_indexes = &uart1_indexes;
 	}
-	uart0_indexes.rx_msg_len = 0;
+	uart_indexes->rx_msg_len = 0;
 }
 
 int uart_return_RX_buf(unsigned char* data, char uart_index)
@@ -355,5 +356,6 @@ int uart_return_RX_buf(unsigned char* data, char uart_index)
 	{
 		data[i] = uart_indexes.UART_RX_BUFFER[i]; 
 	}
+	
 	return uart_indexes.rx_msg_len;
 }

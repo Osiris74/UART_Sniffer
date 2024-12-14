@@ -4,14 +4,14 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #define XTAL 16000000L
-#define baudrate 250000L
+#define baudrate 250000L		// 16 == 115200 velocity
 #define bauddivider 51			//38400 velocity			//(XTAL/(16*baudrate)-1)	//250kBaud
 #define HI(x) ((x)>>8)
 #define LO(x) ((x)& 0xFF)
 
-#define UART_MAX_RING_BUFFER_LENGTH  0x20   // Max ring buffer length
+#define UART_MAX_RING_BUFFER_LENGTH  0x40   // Max ring buffer length
 
-#define UART_MAX_BUFFER		0x20		// 32 byte - Length of the transmition buffer
+#define UART_MAX_BUFFER		0x40		// 32 byte - Length of the transmition buffer
 #define UART_STOP_BYTE      0x0D		// Carridge return
 #define UART_ECHO_BYTE      '?'			// Fix me for another bytes
 #define NEW_LINE			0x0A
